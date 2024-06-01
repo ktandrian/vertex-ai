@@ -1,9 +1,14 @@
+# pylint: disable=invalid-name
+"""
+Demo for enterprise search use case using Google Vertex AI Search Agent Builder.
+"""
+
+import os
 from langchain_google_vertexai import VertexAI
-from langchain_community.retrievers import GoogleVertexAISearchRetriever
-from langchain.chains import ConversationalRetrievalChain
+from langchain_community.retrievers.google_vertex_ai_search import GoogleVertexAISearchRetriever
+from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
-import os
 import streamlit as st
 import vertexai
 
@@ -22,10 +27,13 @@ os.environ["MODEL"] = MODEL
 
 if PROJECT_ID == "YOUR_PROJECT_ID" or DATA_STORE_ID == "YOUR_DATA_STORE_ID":
     raise ValueError(
-        "Please set the PROJECT_ID, DATA_STORE_ID, REGION and MODEL constants to reflect your environment."
+        "Please set the PROJECT_ID, DATA_STORE_ID, REGION and MODEL constants "
+        "to reflect your environment."
     )
 
-def LLM_init():
+
+def llm_init():
+    """Initialize the VertexAI client and LLM chain."""
     vertexai.init(location=REGION)
 
     template = """
@@ -40,16 +48,13 @@ def LLM_init():
     {chat_history}
     Pengguna: {question}
     Asisten:"""
-    
-    prompt = PromptTemplate(
-        input_variables=["context", "chat_history", "question"],
-        template=template
+
+    prompt_from_template = PromptTemplate(
+        input_variables=["context", "chat_history", "question"], template=template
     )
-    
+
     memory = ConversationBufferMemory(
-        memory_key="chat_history",
-        return_messages=True,
-        output_key='answer'
+        memory_key="chat_history", return_messages=True, output_key="answer"
     )
 
     retriever = GoogleVertexAISearchRetriever(
@@ -69,10 +74,11 @@ def LLM_init():
         memory=memory,
         verbose=True,
         combine_docs_chain_kwargs={
-            'prompt': prompt,
-        }
+            "prompt": prompt_from_template,
+        },
     )
     return retrieval_qa
+
 
 st.set_page_config(page_title="Tanya Pajak", page_icon="🔍")
 st.title("TanyaPajak 🔍")
@@ -80,7 +86,11 @@ st.markdown("Ini adalah aplikasi demo untuk Google Cloud Vertex AI Search.")
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
-        {"role": "assistant", "content": "Halo, saya Pajo dan saya akan membantu Anda mencari informasi pajak. Apakah ada yang bisa saya bantu?"}
+        {
+            "role": "assistant",
+            "content": "Halo, saya Pajo dan saya akan membantu Anda mencari informasi pajak. "
+            "Apakah ada yang bisa saya bantu?",
+        }
     ]
 
 for msg in st.session_state.messages:
@@ -90,14 +100,14 @@ if prompt := st.chat_input():
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
 
-    llm_chain = LLM_init()
+    llm_chain = llm_init()
     results = llm_chain.invoke({"question": prompt})
-    msg = results["answer"] + "\n\nSumber:  \n" 
+    msg = results["answer"] + "\n\nSumber:  \n"
     msg += "```"
     for doc in results["source_documents"]:
         raw_dict = doc.metadata
         msg += f"{raw_dict['source']}  \n"
     msg += "```"
-    
+
     st.session_state.messages.append({"role": "assistant", "content": msg})
     st.chat_message("assistant").write(msg)

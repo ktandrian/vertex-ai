@@ -1,9 +1,14 @@
+# pylint: disable=invalid-name
+"""
+Demo for Web UI generation using Google Vertex AI and Gemini Pro model.
+"""
+
+import os
+import time
 from langchain_google_vertexai import VertexAI
 from langchain.prompts import PromptTemplate
-import os
 import streamlit as st
 import vertexai
-import time
 
 PROJECT_ID = "crwn-db-65f8d"  # @param {type:"string"}
 REGION = "asia-southeast2"  # @param {type:"string"}
@@ -83,27 +88,37 @@ Round off the temperature in answer. Write content within html tags in English o
 ANSWER:
 """
 
+
 def LLM_init():
+    """Initialize the VertexAI client and LLM chain."""
     vertexai.init(project=PROJECT_ID, location=REGION)
     model = VertexAI(model_name=MODEL, max_output_tokens=2048)
-    prompt = PromptTemplate.from_template(template)
-    chain = prompt | model
+    prompt_from_template = PromptTemplate.from_template(template)
+    chain = prompt_from_template | model
     return chain
+
 
 st.set_page_config(page_title="Trip Planner", page_icon="🚌")
 st.title("TripPlanner 🚌")
-st.markdown("The ultimate trip recommender powered by Google Vertex AI and Gemini model")
+st.markdown(
+    "The ultimate trip recommender powered by Google Vertex AI and Gemini model"
+)
 
 if "messages_ai_trip" not in st.session_state:
     st.session_state["messages_ai_trip"] = [
-        {"role": "assistant", "content": "Hello, I am Gemini, your travel assistant. Where are you traveling to?"}
+        {
+            "role": "assistant",
+            "content": "Hello, I am Gemini, your travel assistant. Where are you traveling to?",
+        }
     ]
 
 for msg in st.session_state.messages_ai_trip:
-    if (msg["role"] == "duration"):
+    if msg["role"] == "duration":
         st.success(msg["content"])
     else:
-        st.chat_message(msg["role"]).write(msg["content"], unsafe_allow_html=(msg["role"]=="assistant"))
+        st.chat_message(msg["role"]).write(
+            msg["content"], unsafe_allow_html=(msg["role"] == "assistant")
+        )
 
 if prompt := st.chat_input():
     st.session_state.messages_ai_trip.append({"role": "user", "content": prompt})
@@ -113,15 +128,23 @@ if prompt := st.chat_input():
     with st.status("Gemini is thinking...", expanded=True) as status:
         s_time = time.time()
         llm_chain = LLM_init()
-        status.write("LLM initialized in {time}s".format(time = round(time.time() - s_time, 3)))
-        msg = llm_chain.invoke({ "location": prompt, "weather": "29 C with 5% precipitation"})
+        status.write(f"LLM initialized in {round(time.time() - s_time, 3)}s")
+        msg = llm_chain.invoke(
+            {"location": prompt, "weather": "29 C with 5% precipitation"}
+        )
         e_time = time.time()
         elapsed = e_time - s_time
-        status.update(label="Gemini replied in {elapsed}s.".format(elapsed = round(elapsed, 3)), state="complete", expanded=False)
+        status.update(
+            label=f"Gemini replied in {round(elapsed, 3)}s.",
+            state="complete",
+            expanded=False,
+        )
 
     st.session_state.messages_ai_trip.append({"role": "assistant", "content": msg})
     st.chat_message("assistant").write(msg, unsafe_allow_html=True)
 
-    elapsed_txt = "Gemini replied in {elapsed}s.".format(elapsed = round(elapsed, 3))
-    st.session_state.messages_ai_trip.append({"role": "duration", "content": elapsed_txt})
+    elapsed_txt = f"Gemini replied in {round(elapsed, 3)}s."
+    st.session_state.messages_ai_trip.append(
+        {"role": "duration", "content": elapsed_txt}
+    )
     st.success(elapsed_txt)
