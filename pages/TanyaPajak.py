@@ -4,6 +4,7 @@ Demo for enterprise search use case using Google Vertex AI Search Agent Builder.
 """
 
 import os
+from decouple import config
 from langchain_google_vertexai import VertexAI
 from langchain_community.retrievers.google_vertex_ai_search import GoogleVertexAISearchRetriever
 from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
@@ -12,12 +13,12 @@ from langchain.prompts import PromptTemplate
 import streamlit as st
 import vertexai
 
-PROJECT_ID = "crwn-db-65f8d"  # @param {type:"string"}
-DATA_STORE_ID = "pajak_1709461510582"  # @param {type:"string"}
-DATA_STORE_LOCATION = "global"  # @param {type:"string"}
+PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
+DATA_STORE_ID = config("DATA_STORE_ID", default="YOUR_DATA_STORE_ID")
+DATA_STORE_LOCATION = config("DATA_STORE_LOCATION", default="global")
 
-REGION = "asia-southeast2"  # @param {type:"string"}
-MODEL = "gemini-1.0-pro-001"  # @param {type:"string"}
+REGION = config("REGION", default="us-central1")
+MODEL = config("MODEL", default="gemini-1.0-pro-001")
 
 os.environ["DATA_STORE_ID"] = DATA_STORE_ID
 os.environ["PROJECT_ID"] = PROJECT_ID

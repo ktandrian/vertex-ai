@@ -5,14 +5,15 @@ Demo for Web UI generation using Google Vertex AI and Gemini Pro model.
 
 import os
 import time
+from decouple import config
 from langchain_google_vertexai import VertexAI
 from langchain.prompts import PromptTemplate
 import streamlit as st
 import vertexai
 
-PROJECT_ID = "crwn-db-65f8d"  # @param {type:"string"}
-REGION = "asia-southeast2"  # @param {type:"string"}
-MODEL = "gemini-1.0-pro-001"  # @param {type:"string"}
+PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
+REGION = config("REGION", default="us-central1")
+MODEL = config("MODEL", default="gemini-1.0-pro-001")
 
 os.environ["PROJECT_ID"] = PROJECT_ID
 os.environ["REGION"] = REGION
