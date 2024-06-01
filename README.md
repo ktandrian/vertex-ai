@@ -7,7 +7,7 @@ Demo application built to showcase Vertex AI and Gemini model capabilities. This
 1. Install Python to your machine.
 2. Run `./scripts/setup.sh` to create a Python virtual environment and install packages.
 3. Run `./scripts/devserver.sh` to run Streamlit server in development.
-4. Access the application from [http://localhost:8080](http://localhost:8080).
+4. Access the application from [http://localhost:8501](http://localhost:8501).
 
 ## Lint Application
 
