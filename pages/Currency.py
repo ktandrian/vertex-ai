@@ -1,10 +1,27 @@
-from datetime import date
+# pylint: disable=invalid-name
+"""
+Demo for Reasoning Engine use case using Google Vertex AI and Frankfurter API.
+"""
+
+import datetime
+from currency_codes import get_currency_by_code, Currency
 from vertexai.preview import reasoning_engines
 from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
 import streamlit as st
 import vertexai
 
 model = "gemini-1.0-pro"
+currencies = [
+    "USD", "JPY", "BGN", "CZK", "DKK",
+    "GBP", "HUF", "PLN", "RON", "SEK",
+    "CHF", "ISK", "NOK", "TRY", "AUD",
+    "BRL", "CAD", "CNY", "HKD", "IDR",
+    "ILS", "INR", "KRW", "MXN", "MYR",
+    "NZD", "PHP", "SGD", "THB", "ZAR"
+]
+
+def currency_label(c: str):
+    return f"{c} ({get_currency_by_code(c).name})"
 
 safety_settings = {
     HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
@@ -67,13 +84,24 @@ st.divider()
 col1, col2 = st.columns(2)
 currency_f = col1.selectbox(
     "From",
-    ("USD", "EUR", "IDR"))
+    currencies,
+    format_func=currency_label
+)
 currency_t = col2.selectbox(
     "To",
-    ("IDR", "USD", "EUR"))
+    filter(lambda x: x != currency_f, currencies),
+    format_func=currency_label
+)
+d = st.date_input(
+    "Date", 
+    datetime.date.today(), 
+    format="YYYY-MM-DD",
+    max_value=datetime.date.today(),
+    min_value=datetime.date(1999, 1, 4)
+)
 
 if st.button("Convert", type="primary"):
     response = agent.query(
-        input=f"What is the exchange rate from {currency_f} to {currency_t} currency as of today {date.today()}?"
+        input=f"What is the exchange rate from {currency_f} to {currency_t} currency as of {d}?"
     )
     st.write(response["output"])
