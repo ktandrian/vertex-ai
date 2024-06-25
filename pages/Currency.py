@@ -4,11 +4,11 @@ Demo for Reasoning Engine use case using Google Vertex AI and Frankfurter API.
 """
 
 import datetime
-from currency_codes import get_currency_by_code, Currency
+import requests
+from currency_codes import get_currency_by_code
 from vertexai.preview import reasoning_engines
 from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
 import streamlit as st
-import vertexai
 
 model = "gemini-1.0-pro"
 currencies = [
@@ -21,6 +21,7 @@ currencies = [
 ]
 
 def currency_label(c: str):
+    """Return the currency code followed by currency name."""
     return f"{c} ({get_currency_by_code(c).name})"
 
 safety_settings = {
@@ -63,10 +64,10 @@ def get_exchange_rate(
             Example: {"amount": 1.0, "base": "USD", "date": "2023-11-24",
                 "rates": {"EUR": 0.95534}}
     """
-    import requests
     response = requests.get(
         f"https://api.frankfurter.app/{currency_date}",
         params={"from": currency_from, "to": currency_to},
+        timeout=10
     )
     return response.json()
 
@@ -78,7 +79,10 @@ agent = reasoning_engines.LangchainAgent(
 
 st.set_page_config(page_title="Exchange Rate Check", page_icon="💲")
 st.title("Exchange Rate")
-st.markdown("The ultimate exchange rate checker powered by Google Vertex AI Reasoning Engine, Langchain and Gemini model.")
+st.markdown(
+    "The ultimate exchange rate checker powered by Google Vertex AI Reasoning Engine, "
+    "Langchain and Gemini model."
+)
 st.divider()
 
 col1, col2 = st.columns(2)
@@ -94,14 +98,14 @@ currency_t = col2.selectbox(
 )
 d = st.date_input(
     "Date", 
-    datetime.date.today(), 
+    datetime.date.today(),
     format="YYYY-MM-DD",
     max_value=datetime.date.today(),
     min_value=datetime.date(1999, 1, 4)
 )
 
 if st.button("Convert", type="primary"):
-    response = agent.query(
+    q_response = agent.query(
         input=f"What is the exchange rate from {currency_f} to {currency_t} currency as of {d}?"
     )
-    st.write(response["output"])
+    st.write(q_response["output"])

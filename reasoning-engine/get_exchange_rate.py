@@ -1,3 +1,6 @@
+"""Deploy reasoning engine to Google Cloud Vertex AI"""
+
+import requests
 from decouple import config
 from vertexai.preview import reasoning_engines
 from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
@@ -8,6 +11,7 @@ MODEL = "gemini-1.0-pro"
 PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
 REGION = "us-central1"
 
+# pylint: disable=duplicate-code
 safety_settings = {
     HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
@@ -48,16 +52,16 @@ def get_exchange_rate(
             Example: {"amount": 1.0, "base": "USD", "date": "2023-11-24",
                 "rates": {"EUR": 0.95534}}
     """
-    import requests
     response = requests.get(
         f"https://api.frankfurter.app/{currency_date}",
         params={"from": currency_from, "to": currency_to},
+        timeout=10
     )
     return response.json()
 
 
 vertexai.init(
-    project=PROJECT_ID, 
+    project=PROJECT_ID,
     location=REGION,
     staging_bucket="gs://reasoning-engines-staging"
 )
