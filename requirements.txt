@@ -7,6 +7,5 @@ google-cloud-aiplatform==1.60.0
 google-cloud-discoveryengine==0.11.14
 pydantic==2.8.2
 python-decouple==3.8
-tenacity==8.5.0
 typing-inspect==0.9.0
 typing_extensions==4.12.2
