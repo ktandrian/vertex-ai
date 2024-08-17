@@ -3,7 +3,7 @@ langchain==0.2.12
 langchain-community==0.2.11
 langchain-google-vertexai==1.0.8
 streamlit==1.37.1
-google-cloud-aiplatform==1.61.0
+google-cloud-aiplatform==1.62.0
 google-cloud-discoveryengine==0.12.1
 pydantic==2.8.2
 python-decouple==3.8
