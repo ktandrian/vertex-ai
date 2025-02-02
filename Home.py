@@ -6,6 +6,7 @@ The homepage of the Streamlit app, showing menus and links.
 import streamlit as st
 
 st.set_page_config(page_title="Vertex AI")
+st.logo("./static/google-cloud.png")
 st.title("Google Cloud | Generative AI")
 st.markdown("This is a demo application for Google Cloud Vertex AI.")
 
