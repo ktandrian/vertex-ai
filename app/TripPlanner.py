@@ -100,7 +100,7 @@ def LLM_init():
 
 
 st.set_page_config(page_title="Trip Planner", page_icon="🚌")
-st.title("TripPlanner 🚌")
+st.title("Trip Planner 🚌")
 st.markdown(
     "The ultimate trip recommender powered by Google Vertex AI and Gemini model"
 )
