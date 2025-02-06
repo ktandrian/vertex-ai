@@ -77,7 +77,7 @@ agent = reasoning_engines.LangchainAgent(
     model_kwargs=model_kwargs,
 )
 
-st.set_page_config(page_title="Exchange Rate Check", page_icon="💲")
+st.set_page_config(page_title="Exchange Rate", page_icon="💰")
 st.title("Exchange Rate")
 st.markdown(
     "The ultimate exchange rate checker powered by Google Vertex AI Reasoning Engine, "
