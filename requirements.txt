@@ -1,4 +1,4 @@
-beautifulsoup4==4.12.3
+beautifulsoup4==4.13.3
 currency-codes==23.6.4
 langchain==0.3.15
 langchain-community==0.3.15
