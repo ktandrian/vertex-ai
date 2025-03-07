@@ -8,8 +8,12 @@ import datetime
 import requests
 import streamlit as st
 from currency_codes import get_currency_by_code
+from decouple import config
 from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
-from vertexai.preview.reasoning_engines import LangchainAgent
+from vertexai import agent_engines
+# from vertexai.preview.reasoning_engines import LangchainAgent
+
+AGENT_ENGINE_ID = config("AGENT_ENGINE_ID", default="YOUR_AGENT_ENGINE_ID")
 
 model = "gemini-2.0-flash"
 currencies = [
@@ -72,11 +76,14 @@ def get_exchange_rate(
     )
     return response.json()
 
-agent = LangchainAgent(
-    model=model,
-    tools=[get_exchange_rate],
-    model_kwargs=model_kwargs,
-)
+# Development
+# agent = LangchainAgent(
+#     model=model,
+#     tools=[get_exchange_rate],
+#     model_kwargs=model_kwargs,
+# )
+# Production
+agent = agent_engines.get(AGENT_ENGINE_ID)
 
 st.set_page_config(page_title="Exchange Rate", page_icon="💰")
 st.title("Exchange Rate")
