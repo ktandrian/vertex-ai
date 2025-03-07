@@ -1,13 +1,14 @@
 """Deploy reasoning engine to Google Cloud Vertex AI"""
 
 import requests
-from decouple import config
-from vertexai.preview import reasoning_engines
-from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
 import vertexai
+from decouple import config
+from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
+from vertexai import agent_engines
+from vertexai.preview.reasoning_engines import LangchainAgent
 
 DISPLAY_NAME = "Get Exchange Rate"
-MODEL = "gemini-1.0-pro"
+MODEL = "gemini-2.0-flash"
 PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
 REGION = "us-central1"
 
@@ -27,6 +28,7 @@ model_kwargs = {
     "top_k": 40,
     "safety_settings": safety_settings,
 }
+
 
 def get_exchange_rate(
     currency_from: str = "USD",
@@ -55,7 +57,7 @@ def get_exchange_rate(
     response = requests.get(
         f"https://api.frankfurter.app/{currency_date}",
         params={"from": currency_from, "to": currency_to},
-        timeout=10
+        timeout=10,
     )
     return response.json()
 
@@ -67,14 +69,15 @@ vertexai.init(
 )
 
 # Deploy the reasoning engine
-remote_app = reasoning_engines.ReasoningEngine.create(
-    reasoning_engines.LangchainAgent(
+remote_app = agent_engines.create(
+    LangchainAgent(
         model=MODEL,
         tools=[get_exchange_rate],
         model_kwargs=model_kwargs,
     ),
     requirements=[
-        "google-cloud-aiplatform[reasoningengine,langchain]",
+        "cloudpickle==3.1.1",
+        "google-cloud-aiplatform[agent_engines,langchain]",
     ],
     display_name=DISPLAY_NAME,
 )

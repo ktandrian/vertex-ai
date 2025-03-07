@@ -4,13 +4,14 @@ Demo for Reasoning Engine use case using Google Vertex AI and Frankfurter API.
 """
 
 import datetime
-import requests
-from currency_codes import get_currency_by_code
-from vertexai.preview import reasoning_engines
-from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
-import streamlit as st
 
-model = "gemini-1.0-pro"
+import requests
+import streamlit as st
+from currency_codes import get_currency_by_code
+from langchain_google_vertexai import HarmBlockThreshold, HarmCategory
+from vertexai.preview.reasoning_engines import LangchainAgent
+
+model = "gemini-2.0-flash"
 currencies = [
     "USD", "JPY", "BGN", "CZK", "DKK",
     "GBP", "HUF", "PLN", "RON", "SEK",
@@ -71,7 +72,7 @@ def get_exchange_rate(
     )
     return response.json()
 
-agent = reasoning_engines.LangchainAgent(
+agent = LangchainAgent(
     model=model,
     tools=[get_exchange_rate],
     model_kwargs=model_kwargs,

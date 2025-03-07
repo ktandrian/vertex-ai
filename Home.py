@@ -5,6 +5,7 @@ The homepage of the Streamlit app, showing menus and links.
 
 import streamlit as st
 
+
 def home_page():
     """The homepage of the Streamlit app."""
     st.set_page_config(page_title="Vertex AI")
