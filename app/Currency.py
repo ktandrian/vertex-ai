@@ -113,6 +113,7 @@ d = st.date_input(
 )
 
 if st.button("Convert", type="primary"):
+    # pylint: disable=no-member
     q_response = agent.query(
         input=f"What is the exchange rate from {currency_f} to {currency_t} currency as of {d}?"
     )
