@@ -15,7 +15,9 @@ def home_page():
     st.header("Demos")
     st.markdown("Select a demo page below to get started.")
     st.page_link("app/Currency.py", label="Exchange Rate", icon="💰")
+    st.page_link("app/E-Bupot.py", label="E-Bukti Potong", icon="💲")
     st.page_link("app/HotelTags.py", label="Hotel Tags", icon="🏷️")
+    st.page_link("app/Invoice.py", label="Invoice Data Extraction", icon="💲")
     st.page_link("app/TripPlanner.py", label="Trip Planner", icon="✈️")
 
     st.header("Learn More")
@@ -44,6 +46,10 @@ pg = st.navigation({
     "English Demos": [
         st.Page("app/Currency.py", title="Exchange Rate", icon="💰"),
         st.Page("app/TripPlanner.py", title="Trip Planner", icon= "✈️")
+    ],
+    "Indonesian Demos": [
+        st.Page("app/E-Bupot.py", title="E-Bukti Potong", icon="💲"),
+        st.Page("app/Invoice.py", title="Invoice Data Extraction", icon="💲")
     ],
     "Japanese Demos": [
         st.Page("app/HotelTags.py", title="ホテルタグ (Hotel Tags)", icon="🏷️"),
