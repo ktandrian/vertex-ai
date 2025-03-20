@@ -3,6 +3,7 @@
 Demo for Web UI generation using Google Vertex AI and Gemini Pro model.
 """
 
+import json
 import os
 import time
 from decouple import config
@@ -12,8 +13,8 @@ import streamlit as st
 import vertexai
 
 PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
-REGION = config("REGION", default="us-central1")
-MODEL = config("MODEL", default="gemini-1.0-pro-001")
+REGION = "us-central1"
+MODEL = "gemini-2.0-flash-lite"
 
 os.environ["PROJECT_ID"] = PROJECT_ID
 os.environ["REGION"] = REGION
@@ -86,14 +87,20 @@ Now provide the information and plan the trip about '{location}' and weather is 
 Always wrap the answer text with same html tags as provided in the example. Use same class in html tags as provided in example everytime.
 Main div should always be planner-wrapper. Each category should be in planner-card div. Use same planner-icon html as provided. In planner-info, add the relevant answer.
 Round off the temperature in answer. Write content within html tags in English only. Do not mention the travel dates. Answer in English only.
-ANSWER:
+
+Output format:
+{{
+    "result": "<div>...</div>"
+}}
 """
 
 
 def LLM_init():
     """Initialize the VertexAI client and LLM chain."""
     vertexai.init(project=PROJECT_ID, location=REGION)
-    model = VertexAI(model_name=MODEL, max_output_tokens=2048)
+    model = VertexAI(model_name=MODEL,
+                     max_output_tokens=2048,
+                     response_mime_type="application/json")
     prompt_from_template = PromptTemplate.from_template(template)
     chain = prompt_from_template | model
     return chain
@@ -142,7 +149,7 @@ if prompt := st.chat_input():
         )
 
     st.session_state.messages_ai_trip.append({"role": "assistant", "content": msg})
-    st.chat_message("assistant").write(msg, unsafe_allow_html=True)
+    st.chat_message("assistant").write(json.loads(msg)["result"], unsafe_allow_html=True)
 
     elapsed_txt = f"Gemini replied in {round(elapsed, 3)}s."
     st.session_state.messages_ai_trip.append(

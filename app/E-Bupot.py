@@ -13,6 +13,7 @@ PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
 REGION = "us-central1"
 MODEL = "gemini-2.0-flash-001"
 
+# pylint: disable=duplicate-code
 def generate_multimodal(file_content):
     """Generates extracted data using the Gemini multimodal model."""
     client = genai.Client(
