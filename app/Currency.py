@@ -14,6 +14,7 @@ from vertexai import agent_engines
 # from vertexai.preview.reasoning_engines import LangchainAgent
 
 AGENT_ENGINE_ID = config("AGENT_ENGINE_ID", default="YOUR_AGENT_ENGINE_ID")
+PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
 
 model = "gemini-2.0-flash"
 currencies = [
@@ -83,7 +84,9 @@ def get_exchange_rate(
 #     model_kwargs=model_kwargs,
 # )
 # Production
-agent = agent_engines.get(AGENT_ENGINE_ID)
+agent = agent_engines.get(
+    f"projects/{PROJECT_ID}/locations/us-central1/reasoningEngines/{AGENT_ENGINE_ID}"
+)
 
 st.set_page_config(page_title="Exchange Rate", page_icon="💰")
 st.title("Exchange Rate")
