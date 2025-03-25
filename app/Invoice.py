@@ -13,7 +13,7 @@ PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
 REGION = "us-central1"
 MODEL = "gemini-2.0-flash-001"
 
-def generate_multimodal(file_content):
+def generate_multimodal(file):
     """Generates extracted data using the Gemini multimodal model."""
     client = genai.Client(
         vertexai=True,
@@ -45,24 +45,46 @@ def generate_multimodal(file_content):
     {
         "Supplier Name": "...",
         "Supplier Legal Name": "...",
-        "Invoice Date": "...",
+        "Invoice Date": {
+            "extracted_value": "...",
+            "normalized_value": "DD-MMM-YYYY"    
+        },
         "Invoice No.": "...",
         "Invoice Currency": "IDR/THB/VND/...",
-        "Invoice Amount (excluding VAT)": "...",
-        "Invoice Service Charge": "...",
-        "Invoice VAT Amount": "...",
-        "Invoice Amount (including VAT)": "..."
+        "Invoice Amount (excluding VAT)": {
+            "extracted_value": "...",
+            "normalized_value": "..."  // number
+        },
+        "Invoice Service Charge": {
+            "extracted_value": "...",
+            "normalized_value": "..."  // number
+        },
+        "Invoice VAT Amount": {
+            "extracted_value": "...",
+            "normalized_value": "..."  // number
+        },
+        "Invoice Amount (including VAT)": {
+            "extracted_value": "...",
+            "normalized_value": "..."  // number
+        }
     }
     ```
+    
+    Notes on Thai Invoices:
+    * Thai invoices dates might be in Buddhist Era (BE) format, which is 543 years ahead of the Gregorian calendar.
+    * Be mindful of the date format and convert it to DD-MMM-YYYY.
     """
     )
+
+    file_content = file.read()
+    mime_type = file.type
 
     contents = [
         types.Content(
             role="user",
             parts=[
                 text1,
-                types.Part.from_bytes(data=file_content, mime_type="application/pdf")
+                types.Part.from_bytes(data=file_content, mime_type=mime_type)
             ]
         )
     ]
@@ -98,15 +120,12 @@ st.set_page_config(page_title="Invoice Data Extraction", page_icon="💲")
 st.title("Invoice Data Extraction 💲")
 st.markdown("Extracting data from invoice document.")
 
-uploaded_file = st.file_uploader("Upload Invoice", type="pdf")
+uploaded_file = st.file_uploader("Upload Invoice", type=["pdf", "png", "jpg", "jpeg"])
 
 if uploaded_file is not None:
-    # Read the file content as bytes
-    file = uploaded_file.read()
-
     if st.button("Extract Data"):
         with st.spinner("Extracting data..."):
-            extracted_data = generate_multimodal(file)
+            extracted_data = generate_multimodal(uploaded_file)
             # Parse the output string to JSON
             try:
                 extracted_json = json.loads(extracted_data)
