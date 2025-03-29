@@ -6,7 +6,7 @@ langchain-google-vertexai==2.0.16
 streamlit==1.43.2
 google-cloud-aiplatform==1.85.0
 google-cloud-discoveryengine==0.13.7
-google-genai==1.7.0
+google-genai==1.8.0
 pydantic==2.10.6
 python-decouple==3.8
 typing-inspect==0.9.0
