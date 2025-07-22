@@ -4,6 +4,7 @@ The homepage of the Streamlit app, showing menus and links.
 """
 
 import streamlit as st
+from lib.pages_config import LEARN_MORE_LINKS, PAGES
 
 
 def home_page():
@@ -14,45 +15,30 @@ def home_page():
 
     st.header("Demos")
     st.markdown("Select a demo page below to get started.")
-    st.page_link("app/Currency.py", label="Exchange Rate", icon="💰")
-    st.page_link("app/E-Bupot.py", label="E-Bukti Potong", icon="💲")
-    st.page_link("app/HotelTags.py", label="Hotel Tags", icon="🏷️")
-    st.page_link("app/Invoice.py", label="Invoice Data Extraction", icon="💲")
-    st.page_link("app/TripPlanner.py", label="Trip Planner", icon="✈️")
+    for page in PAGES:
+        st.page_link(page["path"], label=page["title"], icon=page["icon"])
 
     st.header("Learn More")
     st.markdown("Learn more about Vertex AI:")
-    st.page_link("https://cloud.google.com/vertex-ai", label="About Vertex AI", icon="☁️")
-    st.page_link(
-        "https://cloud.google.com/vertex-ai/docs/", label="Vertex AI Docs", icon="📖"
-    )
-    st.page_link(
-        "https://cloud.google.com/vertex-ai/pricing", label="Vertex AI Pricing", icon="💰"
-    )
-    st.page_link(
-        "https://ai.google.dev",
-        label="Build with Gemini | Google AI for Developers",
-        icon="💡",
-    )
+    for link in LEARN_MORE_LINKS:
+        st.page_link(link["url"], label=link["label"], icon=link["icon"])
 
     st.divider()
     st.markdown("2024 © KenTandrian. All rights reserved.")
 
+
 st.logo("./static/google-cloud.png")
-pg = st.navigation({
-    "Welcome": [
-        st.Page(home_page, title="Home", icon="🏠")
-    ],
-    "English Demos": [
-        st.Page("app/Currency.py", title="Exchange Rate", icon="💰"),
-        st.Page("app/TripPlanner.py", title="Trip Planner", icon= "✈️")
-    ],
-    "Indonesian Demos": [
-        st.Page("app/E-Bupot.py", title="E-Bukti Potong", icon="💲"),
-        st.Page("app/Invoice.py", title="Invoice Data Extraction", icon="💲")
-    ],
-    "Japanese Demos": [
-        st.Page("app/HotelTags.py", title="ホテルタグ (Hotel Tags)", icon="🏷️"),
-    ]
-})
+
+# Group pages for navigation
+nav_groups = {"Welcome": [st.Page(home_page, title="Home", icon="🏠")]}
+for page_config in PAGES:
+    group = page_config["group"]
+    if group not in nav_groups:
+        nav_groups[group] = []
+
+    nav_groups[group].append(
+        st.Page(page_config["path"], title=page_config["title"], icon=page_config["icon"])
+    )
+
+pg = st.navigation(nav_groups)
 pg.run()

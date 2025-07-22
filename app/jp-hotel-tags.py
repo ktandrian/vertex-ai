@@ -6,19 +6,12 @@ Demo for Google Gemini use case in hotel inventory management.
 import time
 import requests
 import streamlit as st
-from decouple import config
 from bs4 import BeautifulSoup
-from google import genai
 from google.genai import types
-
-PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
+from lib.vertex_ai import get_vertex_ai_client
 
 # Vertex AI Configurations
-client = genai.Client(
-    vertexai=True,
-    location="us-central1",
-    project=PROJECT_ID,
-)
+client = get_vertex_ai_client()
 generate_content_config = types.GenerateContentConfig(
     temperature = 1,
     top_p = 0.95,

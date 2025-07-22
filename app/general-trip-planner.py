@@ -95,6 +95,7 @@ Output format:
 """
 
 
+@st.cache_resource
 def LLM_init():
     """Initialize the VertexAI client and LLM chain."""
     vertexai.init(project=PROJECT_ID, location=REGION)

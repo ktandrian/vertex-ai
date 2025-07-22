@@ -5,21 +5,14 @@ Demo for multilingual invoice data extraction using Google Vertex AI and Gemini 
 
 import json
 import streamlit as st
-from decouple import config
-from google import genai
 from google.genai import types
+from lib.vertex_ai import get_vertex_ai_client
 
-PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
-REGION = "us-central1"
 MODEL = "gemini-2.0-flash-001"
 
 def generate_multimodal(file):
     """Generates extracted data using the Gemini multimodal model."""
-    client = genai.Client(
-        vertexai=True,
-        project=PROJECT_ID,
-        location=REGION
-    )
+    client = get_vertex_ai_client()
 
     text1 = types.Part.from_text(text="""
     Extract the following information from the provided invoice image(s).
