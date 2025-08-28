@@ -149,8 +149,9 @@ if prompt := st.chat_input():
             expanded=False,
         )
 
-    st.session_state.messages_ai_trip.append({"role": "assistant", "content": msg})
-    st.chat_message("assistant").write(json.loads(msg)["result"], unsafe_allow_html=True)
+    content = json.loads(msg)["result"]
+    st.session_state.messages_ai_trip.append({"role": "assistant", "content": content})
+    st.chat_message("assistant").write(content, unsafe_allow_html=True)
 
     elapsed_txt = f"Gemini replied in {round(elapsed, 3)}s."
     st.session_state.messages_ai_trip.append(
