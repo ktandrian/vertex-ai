@@ -14,7 +14,7 @@ import vertexai
 
 PROJECT_ID = config("PROJECT_ID", default="YOUR_PROJECT_ID")
 REGION = "us-central1"
-MODEL = "gemini-2.0-flash-lite"
+MODEL = "gemini-2.5-flash-lite"
 
 os.environ["PROJECT_ID"] = PROJECT_ID
 os.environ["REGION"] = REGION
