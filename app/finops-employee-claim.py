@@ -1,153 +1,162 @@
 # pylint: disable=invalid-name
 """
-Demo for employee claim data extraction using Google Vertex AI and Gemini model.
+Main application file for the Employee Claim Data Extraction demo.
+
+This application uses a context-aware, two-stage process for maximum accuracy:
+1.  **Stage 1 (Extraction):** A single API call extracts raw data and global document
+    context from the uploaded file.
+2.  **Stage 2 (Classification):** A separate, targeted API call is made for each
+    line item, providing it with the global context to make a highly accurate
+    classification.
 """
 
 import json
+import pandas as pd
 import streamlit as st
 from google.genai import types
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
+
+from lib.categorize_expense import CATEGORIES_MAP
+from lib.prompts import PROMPT_STAGE_1_EXTRACTION, get_stage_2_classification_prompt
 from lib.vertex_ai import get_vertex_ai_client
 
+# --- Configuration ---
 MODEL = "gemini-2.5-flash"
+CLIENT = get_vertex_ai_client()
+MAX_WORKERS = 10
 
-def generate_multimodal(file):
-    """Generates extracted data using the Gemini multimodal model."""
-    client = get_vertex_ai_client()
+FINAL_CONTEXT_FIELDS_TO_KEEP = [
+    'report_title', 'employee_id', 'employee_name', 'entity', 'cost_center',
+    'profit_center', 'travel_event_start_date', 'travel_event_end_date'
+]
+COLUMN_ORDER = [
+    'report_title', 'employee_id', 'employee_name', 'entity', 'cost_center', 'profit_center',
+    'travel_event_start_date', 'travel_event_end_date', 'transaction_date', 'transaction_time',
+    'Category Claim', 'Sub Category', 'COA', 'merchant', 'description', 'original_currency',
+    'original_amount', 'entity_currency', 'entity_amount'
+]
 
-    text1 = types.Part.from_text(text="""
-    You are an AI agent specialized in multi-language financial document data extraction.
-    Your task is to analyze the provided document (which could be an invoice, payment request, email, or other financial record) and extract specific financial details.
+# --- Functions (These remain unchanged) ---
+def categorize_expense(classification_key: str, raw_expense_item: dict) -> dict:
+    category_details = CATEGORIES_MAP.get(classification_key, CATEGORIES_MAP["Default_Uncategorized"])
+    raw_expense_item.update(category_details)
+    return raw_expense_item
 
-    Strictly follow these instructions:
-    1.  **Output Format:** Return the extracted information as a single JSON object.
-    2.  **Field Definitions & Extraction Logic:**
-        *   `Claim Category`:
-            *   **Definition:** Classify the primary purpose of the expense.
-            *   **Options:** `Flights`, `Meal`, `Accommodation`, `Service Fee`, `Other Fee`.
-            *   **Logic:**
-                *   `Flights`: Look for terms like "flight," "airfare," "ticket," "airline," "travel," "transportation (air)."
-                *   `Meal`: Look for terms like "meal," "food," "dining," "restaurant," "catering," "provision."
-                *   `Accommodation`: Look for terms like "hotel," "lodging," "stay," "resort," "guesthouse," "rent (room/apartment)."
-                *   `Service Fee`: This category is for non-physical goods, professional services, subscriptions, or membership fees. Look for terms like "service," "fee," "consultation," "training," "certification," "membership," "license," "subscription," "commission," "management fee," "professional fee," "guarantee fee."
-                *   `Other Fee`: Use this if none of the above categories fit the primary purpose of the expense.
-        *   `Employee Name`:
-            *   **Definition:** The name of the individual primarily associated with this expense (e.g., preparer, recipient, approver, participant, or the person being reimbursed).
-            *   **Keywords/Logic:** Look for fields like "Prepared by," "Submitted by," "Recipient," "To," "From (individual)," "Attn:", names above or near signatures, names in email 'From' or 'To' fields, or names listed as participants in a service. Prioritize the most relevant name initiating or receiving the expense/service.
-        *   `Items`:
-            *   **Definition:** An array of objects, where each object represents a single line item from the document.
-            *   **Logic:**
-                *   Identify tables or lists that detail individual goods or services.
-                *   For each item, extract:
-                    *   `description` (string): A concise text detailing the item or service. Prioritize the primary description.
-                    *   `quantity` (string or number): The number of units for the item. Extract as present (e.g., "4" or "3"). If not clearly numerical or unavailable, set to `null`.
-                    *   `unit_price` (string or number): The cost per unit for the item. Extract as numerical value. If not clearly numerical or unavailable, set to `null`.
-                    *   `line_total` (string or number): The total cost for that specific item line (quantity * unit_price, or direct line total). Extract as numerical value.
-                *   If no clear itemized list is present, try to infer a single item based on the main purpose/description of the document. If no items can be extracted, the array should be empty `[]`.
-        *   `Total Amount Due`:
-            *   **Definition:** The final, total monetary amount that needs to be paid, including all taxes and fees.
-            *   **Keywords/Logic:** Look for terms like "Total," "Grand Total," "Amount Due," "Total Payable," "Invoice Total," "Balance Due." This is typically the largest monetary value presented as the final sum. Extract only the numerical value.
-        *   `Invoice Number`:
-            *   **Definition:** The unique identification number for the invoice, receipt, or payment request.
-            *   **Keywords/Logic:** Look for "Invoice No.," "Inv. #," "Receipt No.," "Document No.," "Reference No.," "Number," "Bill No." or common prefixes like `INV-`, `REF-`, `DOC-` followed by an alphanumeric sequence. If multiple numbers are present (e.g., a tax invoice number and a main invoice number), prioritize the primary invoice/document number.
-        *   `Transaction Date`:
-            *   **Definition:** The date when the document was issued, the transaction occurred, or the expense was incurred.
-            *   **Keywords/Logic:** Look for "Date," "Invoice Date," "Issue Date," "Prepared Date," "Document Date."
-            *   **Format:** `YYYY-MM-DD`.
-        *   `Vendor Name`:
-            *   **Definition:** The full legal name of the company or entity that provided the goods or services and issued the document.
-            *   **Keywords/Logic:** Typically found at the top of an invoice, near a company logo, in fields like "Vendor Name," "Supplier," "Issued By," "From." Look for common legal entity indicators (e.g., Inc., Ltd., LLC, Co., S.A., K.K., PT).
-        *   `Currency`:
-            *   **Definition:** The currency of the total amount.
-            *   **Keywords/Logic:** Infer from currency symbols (e.g., $, €, £, ¥, Rp), or explicit mentions like "USD," "EUR," "JPY," "IDR." If the symbol is ambiguous (like '$'), try to identify the country or other currency hints within the document. If no currency symbol or code is found, set to `null`.
-
-    3.  **Handling Missing Data:** If any requested data point is not found in the document, assign its value as `null`. Do not make assumptions for missing fields.
-
-    **Example of Expected JSON Output (based on provided Document 1 - ALSPPI Invoice):**
-
-    ```json
-    {
-        "Category Claim": "Service Fee",
-        "Employee Name": "John Doe",
-        "Items": [
-            {
-                "description": "Software License Renewal - User A",
-                "quantity": 1,
-                "unit_price": 500.00,
-                "line_total": 500.00
-            },
-            {
-                "description": "Premium Support Package",
-                "quantity": null,
-                "unit_price": null,
-                "line_total": 750.00
-            }
-        ],
-        "Total Amount Due": "1250.00",
-        "Invoice Number": "INV-2024-00123",
-        "Transaction Date": "2024-01-15",
-        "Vendor Name": "Tech Solutions Inc.",
-        "Currency": "USD"
-    }
-    """
-    )
-
-    file_content = file.read()
-    mime_type = file.type
-
-    contents = [
-        types.Content(
-            role="user",
-            parts=[
-                text1,
-                types.Part.from_bytes(data=file_content, mime_type=mime_type)
-            ]
-        )
-    ]
-    generate_content_config = types.GenerateContentConfig(
-        temperature=0.2,
-        top_p=0.8,
-        max_output_tokens=65535,
-        response_modalities=["TEXT"],
-        safety_settings=[types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ), types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ), types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        ), types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
-        )],
-        response_mime_type = "application/json",
-        thinking_config=types.ThinkingConfig(
-            thinking_budget=0,
-        ),
-    )
-
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=contents,
-        config=generate_content_config,
-    )
+def call_gemini_api_for_extraction(file_bytes, mime_type):
+    contents = [types.Content(role="user", parts=[types.Part.from_text(text=PROMPT_STAGE_1_EXTRACTION), types.Part.from_bytes(data=file_bytes, mime_type=mime_type)])]
+    response = CLIENT.models.generate_content(model=MODEL, contents=contents, config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1))
     return response.text
 
-st.set_page_config(page_title="Employee Claim", page_icon="📄")
-st.title("Employee Claim 📄")
-st.markdown("Extracting data from an employee claim document.")
+def call_gemini_api_for_classification(prompt: str) -> str:
+    contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
+    response = CLIENT.models.generate_content(model=MODEL, contents=contents, config=types.GenerateContentConfig(temperature=0.0))
+    return response.text.strip()
 
+def classify_and_process_item(item, global_context, options_string):
+    item_to_classify = {"merchant": item.get("merchant"), "description": item.get("description"), "original_currency": item.get("original_currency")}
+    prompt_stage_2 = get_stage_2_classification_prompt(item_to_classify, global_context, options_string)
+    classification_key = call_gemini_api_for_classification(prompt_stage_2)
+    processed_item = categorize_expense(classification_key, item)
+    final_context_to_add = {key: global_context.get(key) for key in FINAL_CONTEXT_FIELDS_TO_KEEP}
+    processed_item.update(final_context_to_add)
+    return processed_item
+
+# --- Main Application UI and Logic ---
+st.set_page_config(page_title="Employee Claim", page_icon="📄", layout="wide")
+st.title("📄 Employee Claim Processor")
+st.markdown("Upload a claim document to extract and classify all line items using a **parallelized**, context-aware, two-stage AI pipeline.")
+
+# --- SESSION STATE INITIALIZATION ---
+if 'processing_complete' not in st.session_state:
+    st.session_state.processing_complete = False
+if 'processed_data' not in st.session_state:
+    st.session_state.processed_data = None
+if 'raw_stage1_output' not in st.session_state:
+    st.session_state.raw_stage1_output = None
+
+# --- File Uploader ---
 uploaded_file = st.file_uploader("Upload Claim Document", type=["pdf", "png", "jpg", "jpeg"])
 
+# When a new file is uploaded, reset the state
+if uploaded_file is not None and (st.session_state.get('uploaded_file_id') != uploaded_file.file_id):
+    st.session_state.processing_complete = False
+    st.session_state.processed_data = None
+    st.session_state.raw_stage1_output = None
+    st.session_state.uploaded_file_id = uploaded_file.file_id
+
+# --- Processing Logic ---
 if uploaded_file is not None:
-    if st.button("Extract Data"):
-        with st.spinner("Extracting data..."):
-            extracted_data = generate_multimodal(uploaded_file)
-            # Parse the output string to JSON
+    if st.button("Process Document", type="primary"):
+        # --- STAGE 1: EXTRACTION ---
+        with st.spinner("Stage 1: Extracting raw data and global context..."):
             try:
-                extracted_json = json.loads(extracted_data)
-                st.json(extracted_json)
-            except json.JSONDecodeError:
-                st.error("Error: Could not parse extracted data as JSON.")
-                st.write(extracted_data)  # Display the raw output for debugging
+                # Read file bytes once
+                file_bytes = uploaded_file.getvalue()
+                mime_type = uploaded_file.type
+                
+                raw_data_str = call_gemini_api_for_extraction(file_bytes, mime_type)
+                raw_data_json = json.loads(raw_data_str)
+                st.session_state.raw_stage1_output = raw_data_json # Store raw output
+                
+                global_context = raw_data_json.get("global_context", {})
+                raw_items = raw_data_json.get("items", [])
+
+            except Exception as e:
+                st.error(f"An error occurred during Stage 1: {e}")
+                st.stop()
+
+        # --- STAGE 2: PARALLEL CLASSIFICATION ---
+        if raw_items:
+            final_processed_report = []
+            st.info(f"Stage 1 complete. Found {len(raw_items)} line items. Starting parallel classification...")
+            with st.spinner(f"Stage 2: Classifying {len(raw_items)} items in parallel..."):
+                options_string = "\n".join([f"{key}: {value.get('Category Description', '')}" for key, value in CATEGORIES_MAP.items()])
+                
+                with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                    future_to_item = {executor.submit(classify_and_process_item, item, global_context, options_string): item for item in raw_items}
+                    
+                    for future in tqdm(as_completed(future_to_item), total=len(raw_items), desc="Classifying Items"):
+                        try:
+                            processed_item = future.result()
+                            final_processed_report.append(processed_item)
+                        except Exception as e:
+                            item = future_to_item[future]
+                            st.error(f"Error classifying item '{item.get('description')}': {e}")
+
+            # --- STORE FINAL RESULT IN SESSION STATE ---
+            st.session_state.processed_data = final_processed_report
+            st.session_state.processing_complete = True
+            st.rerun() # Force a rerun to jump to the display logic immediately
+        else:
+            st.warning("No line items were found in the document.")
+            st.session_state.processing_complete = True # Mark as complete to avoid re-running
+
+# --- Display Logic ---
+if st.session_state.processing_complete:
+    st.header("✅ Final Processed Report", divider="rainbow")
+    
+    # Display the raw Stage 1 output if it exists
+    if st.session_state.raw_stage1_output:
+        with st.expander("Show Stage 1 Raw Output (includes temporary context)"):
+            st.json(st.session_state.raw_stage1_output)
+
+    # Check if there is data to display
+    if st.session_state.processed_data:
+        st.success("Document processed successfully!")
+        
+        output_format = st.radio(
+            "Select Output Format:",
+            ("Table", "JSON"),
+            horizontal=True,
+            key='output_format_selector' # A key makes the widget more stable
+        )
+
+        if output_format == "JSON":
+            st.json(st.session_state.processed_data)
+        else:
+            df = pd.DataFrame(st.session_state.processed_data)
+            existing_columns = [col for col in COLUMN_ORDER if col in df.columns]
+            st.dataframe(df[existing_columns], use_container_width=True, hide_index=True)
+    else:
+        st.info("Processing is complete, but no line items were found to display.")
