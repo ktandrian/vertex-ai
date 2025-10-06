@@ -8,7 +8,7 @@ google-cloud-aiplatform==1.115.0
 google-cloud-discoveryengine==0.13.12
 google-genai==1.39.1
 pandas==2.3.2
-pydantic==2.11.9
+pydantic==2.11.10
 python-decouple==3.8
 tqdm==4.67.1
 typing-inspect==0.9.0
